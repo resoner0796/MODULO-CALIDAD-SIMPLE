@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Calidad</title>
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+<style>
+:root {
+  /* Paleta de Colores Profesional */
+  --bg-dark: #111827;      /* Azul Marino Oscuro (Fondo Principal) */
+  --bg-medium: #1F2937;    /* Gris Azulado Oscuro (Tarjetas y Paneles) */
+  --bg-light: #374151;     /* Gris Azulado Claro (Bordes, Hover) */
+  --text-light: #F9FAFB;   /* Blanco Hueso (Texto Principal) */
+  --text-medium: #9CA3AF; /* Gris Claro (Texto Secundario, Etiquetas) */
+  --text-dark: #1F2937;    /* Texto para fondos claros */
+  --accent-blue: #3B82F6;   /* Azul Principal (Botones, Énfasis) */
+  --accent-blue-hover: #2563EB;
+  --accent-green: #10B981;  /* Verde Esmeralda (Éxito, Liberado) */
+  --accent-red: #EF4444;    /* Rojo (Peligro, Rechazado) */
+  --accent-orange: #F59E0B; /* Ámbar (Advertencia, En Proceso) */
+  
+  /* Estilos de LED */
+  --led-size: 50px;
+  --led-gap: 16px;
+  --led-off-core: #2d3748;
+  --led-off-edge: #1a202c;
+  --glow-green: rgba(16, 185, 129, 0.7);
+  --glow-red: rgba(239, 68, 68, 0.7);
+  --glow-orange: rgba(245, 158, 11, 0.7);
+  --blink-duration: 1.2s;
+
+  /* Tipografía */
+  --font-family: 'Poppins', Arial, Helvetica, sans-serif;
+  --titulo-size: clamp(36px, 6vw, 72px);
+
+  /* Otros */
+  --border-radius-md: 16px; /* Aumentamos el radio para un look más moderno */
+  --border-radius-sm: 10px;
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  font-family: var(--font-family);
+  color: var(--text-light);
+  background-color: var(--bg-dark);
+  /* Fondo degradado para que el efecto glass se aprecie mejor */
+  background-image: 
+    radial-gradient(at 47% 33%, hsl(225, 39%, 30%) 0, transparent 59%), 
+    radial-gradient(at 82% 65%, hsl(253, 16%, 7%) 0, transparent 55%);
+}
+
+.pantalla {
+  display: none;
+  width: 100%;
+  min-height: 100vh;
+  padding: 20px;
+  transition: opacity 0.5s ease-out;
+}
+.pantalla.activa { display: flex; flex-direction: column; }
+
+/* ================= BRANDING HEADER ================= */
+.brand-title {
+  font-family: 'Times New Roman', Times, serif;
+  color: white;
+  font-size: clamp(22px, 3vw, 28px);
+  font-weight: normal;
+  text-align: center;
+  width: 100%;
+  letter-spacing: 2px;
+  margin-top: 10px;
+  margin-bottom: 5px;
+  padding: 0;
+}
+
+/* ================= SPLASH SCREEN ================= */
+#splashScreen {
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-dark);
+}
+.splash-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+.splash-logo-container {
+  border-radius: 25px;
+  margin: 20px 0;
+  padding: 15px;
+  /* Efecto Glassmorphism */
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px); /* Para Safari */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+.splash-logo {
+  width: 150px;
+  height: auto;
+  display: block;
+  border-radius: 15px;
+}
+.splash-loading {
+  font-size: 1.2rem;
+  color: var(--text-medium);
+  letter-spacing: 2px;
+}
+.splash-loading .dot {
+  animation: blink-dot 1.4s infinite;
+  opacity: 0;
+}
+.splash-loading .dot:nth-child(2) { animation-delay: 0.2s; }
+.splash-loading .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink-dot { 0%, 100% { opacity: 0; } 50% { opacity: 1; } }
+
+/* ================= PANTALLA LOGIN CALIDAD ================= */
+#pantallaCalidadLogin {
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+}
+#pantallaCalidadLogin .brand-header { text-align: center; }
+#pantallaCalidadLogin h1 {
+  margin: 0;
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 700;
+  color: var(--text-light);
+}
+.login-columns-container {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+  max-width: 400px;
+  flex-wrap: wrap;
+}
+.login-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  min-width: 250px;
+}
+.login-column .usuario-btn { width: 100%; }
+
+/* === BOTÓN ESTILO GLASS === */
+.usuario-btn {
+  background: rgba(59, 130, 246, 0.25); /* Color base con transparencia */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--text-light);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 14px 28px;
+  border-radius: var(--border-radius-sm);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+  box-shadow: var(--shadow-md);
+}
+.usuario-btn:hover {
+  background: rgba(59, 130, 246, 0.4); /* Aumentar opacidad en hover */
+  transform: translateY(-2px);
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+}
+.btn-rojo { background: rgba(239, 68, 68, 0.25); }
+.btn-rojo:hover { background: rgba(239, 68, 68, 0.4); }
+
+
+/* ================= PANTALLA 2: PANEL PRINCIPAL ================= */
+#pantalla2 { gap: 10px; }
+.header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  width: 100%;
+  flex-wrap: wrap;
+}
+#tituloFijo {
+  font-weight: 700;
+  text-align: center;
+  font-size: var(--titulo-size);
+  color: var(--text-light);
+}
+#turnoActual {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: var(--border-radius-sm);
+  /* Efecto Glass */
+  background: rgba(31, 41, 55, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.zona-centro {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 24px;
+  margin-top: 20px;
+}
+.resumen-turno { display: none !important; } /* Ocultar para Calidad */
+.grupo-contenedor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  width: 100%;
+  max-width: 1400px;
+  justify-content: center;
+}
+/* === MEJORA: CARD CON FONDO DE PANEL LED === */
+.grupo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 24px;
+  flex-grow: 1;
+  min-width: 300px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: var(--border-radius-md);
+  
+  /* Nuevo fondo de panel de LEDs apagados */
+  background-color: #18181a; /* Color base oscuro del panel */
+  background-image: radial-gradient(circle at center, rgba(0,0,0,0.4) 2px, transparent 3px);
+  background-size: 12px 12px; /* Controla el tamaño y espaciado de los "puntos" */
+  
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Mantenemos el borde glass */
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6); /* Sombra interior para dar relieve */
+}
+.grupo:hover {
+  transform: translateY(-5px);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6), 0 0 20px rgba(59, 130, 246, 0.1);
+}
+.grupo.oculto { display: none; }
+.grupo .nombre {
+  font-size: clamp(20px, 2.2vw, 26px);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.grupo .tarimas {
+  font-size: clamp(16px, 1.7vw, 18px);
+  color: var(--text-medium);
+  margin-bottom: 20px;
+}
+.leds {
+  display: flex;
+  gap: var(--led-gap);
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 10px;
+}
+/* === MEJORA LED === */
+.led {
+  width: var(--led-size);
+  height: var(--led-size);
+  border-radius: 50%;
+  cursor: pointer;
+  background: radial-gradient(circle at 45% 40%, var(--led-off-core) 40%, var(--led-off-edge) 100%);
+  border: 2px solid var(--led-off-edge);
+  transition: all .2s ease;
+  /* Flexbox para centrar el texto del contador */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: var(--text-dark);
+  line-height: 1;
+}
+.led:active { transform: scale(.96); }
+.led.on {
+  background: radial-gradient(circle at 48% 45%, #6EE7B7 40%, var(--accent-green) 100%);
+  box-shadow: 0 0 22px var(--glow-green);
+  border-color: var(--accent-green);
+  animation: blink var(--blink-duration) ease-in-out infinite;
+}
+/* Estilos para el texto del contador */
+.led .tiempo-transcurrido b {
+    font-size: 18px;
+    font-weight: 700;
+}
+.led .tiempo-transcurrido small {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+.led.naranja {
+  background: radial-gradient(circle at 48% 45%, #FBBF24 40%, var(--accent-orange) 100%);
+  box-shadow: 0 0 22px var(--glow-orange);
+  border-color: var(--accent-orange);
+}
+.led.rojo {
+  background: radial-gradient(circle at 48% 45%, #F87171 40%, var(--accent-red) 100%);
+  box-shadow: 0 0 22px var(--glow-red);
+  border-color: var(--accent-red);
+}
+.led.verde {
+  background: radial-gradient(circle at 48% 45%, #6EE7B7 40%, var(--accent-green) 100%);
+  box-shadow: 0 0 22px var(--glow-green);
+  border-color: var(--accent-green);
+}
+.led.disabled { cursor: not-allowed; opacity: 0.6; }
+
+.tiempos {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--text-medium);
+  text-align: left;
+  width: 100%;
+  max-height: 150px;
+  overflow-y: auto;
+  background-color: rgba(0, 0, 0, 0.2); /* Fondo sutilmente transparente */
+  padding: 10px;
+  border-radius: var(--border-radius-sm);
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.tiempos p { margin: 0 0 5px; }
+.contadores-calidad {
+  display: flex;
+  gap: 30px;
+  margin-top: 10px;
+}
+.contador-calidad {
+  text-align: center;
+  font-weight: 600;
+}
+.contador-calidad .valor { font-size: 24px; font-weight: 700; }
+.contador-calidad .etiqueta { font-size: 12px; color: var(--text-medium); }
+.footer { width: 100%; display: flex; justify-content: center; padding: 20px 0 0; }
+.footer .usuario-btn { padding: 10px 20px; font-size: 16px; }
+
+@keyframes blink { 50% { box-shadow: 0 0 35px var(--glow-green); } }
+
+/* ================= MODALES ESTILO GLASS ================= */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Fondo del overlay */
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+.modal.visible { visibility: visible; opacity: 1; }
+/* === MODAL ESTILO GLASS === */
+.modal-content {
+  padding: 30px;
+  text-align: center;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--border-radius-md);
+  /* Efecto Glass */
+  background: rgba(31, 41, 55, 0.7); /* Mayor opacidad para legibilidad */
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+.modal-content h3 {
+  margin-top: 0;
+  font-size: 22px;
+  margin-bottom: 25px;
+}
+
+/* Modal Calidad */
+.opciones {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+.opcion-btn {
+  padding: 15px 25px;
+  font-size: 18px;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+  color: #fff;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.opcion-btn:hover { transform: scale(1.02); }
+.opcion-btn[data-color="naranja"] { background: rgba(245, 158, 11, 0.3); }
+.opcion-btn[data-color="naranja"]:hover { background: rgba(245, 158, 11, 0.5); }
+.opcion-btn[data-color="rojo"] { background: rgba(239, 68, 68, 0.3); }
+.opcion-btn[data-color="rojo"]:hover { background: rgba(239, 68, 68, 0.5); }
+.opcion-btn[data-color="verde"] { background: rgba(16, 185, 129, 0.3); }
+.opcion-btn[data-color="verde"]:hover { background: rgba(16, 185, 129, 0.5); }
+
+.cerrar-btn {
+  background: rgba(55, 65, 81, 0.4); /* --bg-light con transparencia */
+  color: var(--text-light);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 10px 20px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  backdrop-filter: blur(5px);
+}
+.cerrar-btn:hover { background: rgba(75, 85, 99, 0.6); }
+
+/* Modal de Rechazo */
+#modalRechazo .modal-content {
+  text-align: left;
+  max-height: 85vh; 
+  overflow-y: auto;
+}
+#modalRechazo form { display: flex; flex-direction: column; gap: 15px; }
+#modalRechazo label { font-size: 14px; margin-bottom: 5px; display: block; color: var(--text-medium); }
+/* === INPUTS ESTILO GLASS === */
+#modalRechazo input, #modalRechazo textarea, .modal-prompt-input {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--border-radius-sm);
+  color: var(--text-light);
+  font-size: 16px;
+  font-family: var(--font-family);
+  /* Efecto Glass */
+  background: rgba(17, 24, 39, 0.5); /* --bg-dark con transparencia */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+#modalRechazo input:focus, #modalRechazo textarea:focus, .modal-prompt-input:focus {
+    outline: none;
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+#modalRechazo textarea { resize: vertical; min-height: 80px; }
+
+/* ---- MODALES GENÉRICOS ---- */
+.modal-generic-message {
+  font-size: 16px;
+  color: var(--text-medium);
+  margin-bottom: 25px;
+  line-height: 1.6;
+}
+.modal-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+
+/* ================= MEDIA QUERIES RESPONSIVE ================= */
+@media (max-width: 768px) {
+  .header { justify-content: center; text-align: center; }
+  #turnoActual { position: static; transform: none; margin-top: 10px; }
+}
+
+/* === MEJORA: Media Queries para Móvil en Horizontal (Landscape) === */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+    /* Ajustes generales para ahorrar espacio vertical */
+    .pantalla {
+        padding: 10px;
+        gap: 10px;
+        justify-content: center;
+    }
+    .brand-title {
+        margin-top: 5px;
+        margin-bottom: 0;
+        font-size: 18px !important;
+    }
+    .footer {
+        padding: 10px 0 0;
+        display: none; /* Ocultar footer para dar más espacio al contenido principal */
+    }
+
+    /* Pantalla Login Calidad */
+    #pantallaCalidadLogin h1 {
+        font-size: 28px !important;
+        margin-bottom: 15px;
+    }
+    .login-columns-container {
+        flex-direction: row;
+        gap: 15px;
+        align-items: center;
+    }
+    .login-column {
+        gap: 10px;
+    }
+    .usuario-btn {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+    
+    /* Pantalla 2: Panel Principal */
+    #tituloFijo {
+        font-size: 32px !important;
+    }
+    #turnoActual {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+    .zona-centro {
+        margin-top: 5px;
+        gap: 15px;
+    }
+    .grupo-contenedor {
+        flex-wrap: nowrap; /* CLAVE: Evita que los grupos se envuelvan */
+        gap: 15px;
+    }
+    .grupo {
+        padding: 15px;
+        min-width: 180px; /* Permitir que se encojan un poco más */
+    }
+    .grupo .nombre {
+        font-size: 16px !important;
+    }
+    .grupo .tarimas {
+        font-size: 12px !important;
+        margin-bottom: 10px;
+    }
+    .leds {
+        gap: 8px;
+    }
+    .led {
+        --led-size: 38px; /* Hacer los LEDs más pequeños */
+    }
+    .led .tiempo-transcurrido b {
+        font-size: 14px;
+    }
+    .led .tiempo-transcurrido small {
+        font-size: 8px;
+    }
+}
+</style>
+</head>
+<body>
+
+<section id="splashScreen" class="pantalla activa">
+    <div class="splash-content">
+        <p class="brand-title">CORNING</p>
+        <div class="splash-logo-container">
+             <img src="iconolog-512.PNG" alt="Logo de Logística" class="splash-logo">
+        </div>
+        <p class="splash-loading">Cargando<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></p>
+    </div>
+</section>
+
+<section id="pantallaCalidadLogin" class="pantalla">
+    <div class="brand-header">
+        <p class="brand-title">CORNING</p>
+        <h1>Módulo de Calidad</h1>
+    </div>
+    <div class="login-columns-container">
+        <div class="login-column">
+            <button class="usuario-btn" onclick="seleccionarUsuarioCalidad('CALIDAD_MULTIPORT')">Calidad Multiport</button>
+            <button class="usuario-btn" onclick="seleccionarUsuarioCalidad('CALIDAD_DROPS')">Calidad Drops</button>
+            <button class="usuario-btn" onclick="seleccionarUsuarioCalidad('CALIDAD_BEDROCK')">Calidad Bedrock</button>
+        </div>
+    </div>
+</section>
+
+<section id="pantalla2" class="pantalla">
+    <p class="brand-title">CORNING</p>
+    <header class="header">
+        <div id="tituloFijo">CALIDAD</div>
+        <div id="turnoActual"></div>
+    </header>
+    <div class="zona-centro">
+        <div class="grupo-contenedor">
+            <div class="grupo" data-grupo="MULTIPORT">
+                <div class="nombre">MULTIPORT</div>
+                <div class="tarimas">Tarimas: 0</div>
+                <div class="leds" data-grupo="MULTIPORT" data-linea="linea1"></div>
+                <div class="leds" data-grupo="MULTIPORT" data-linea="linea2"></div>
+                <div class="tiempos" data-grupo="MULTIPORT"></div>
+            </div>
+
+            <div class="grupo" data-grupo="DROPS">
+                <div class="nombre">DROPS</div>
+                <div class="tarimas">Tarimas: 0</div>
+                <div class="leds" data-grupo="DROPS" data-linea="linea1"></div>
+                <div class="leds" data-grupo="DROPS" data-linea="linea2"></div>
+                <div class="tiempos" data-grupo="DROPS"></div>
+            </div>
+
+            <div class="grupo" data-grupo="BEDROCK">
+                <div class="nombre">BEDROCK</div>
+                <div class="tarimas">Tarimas: 0</div>
+                <div class="leds" data-grupo="BEDROCK" data-linea="linea1"></div>
+                <div class="leds" data-grupo="BEDROCK" data-linea="linea2"></div>
+                <div class="tiempos" data-grupo="BEDROCK"></div>
+            </div>
+
+            <div class="grupo" data-grupo="CALIDAD_MULTIPORT">
+                <div class="nombre">CALIDAD MULTIPORT</div>
+                <div class="tarimas">Tarimas: 0</div>
+                <div class="leds" data-grupo="CALIDAD_MULTIPORT" data-linea="linea1"></div>
+                <div class="contadores-calidad">
+                    <div class="contador-calidad">
+                        <span class="valor" id="liberadas_CALIDAD_MULTIPORT">0</span>
+                        <div class="etiqueta">Liberadas</div>
+                    </div>
+                    <div class="contador-calidad">
+                        <span class="valor" id="rechazadas_CALIDAD_MULTIPORT">0</span>
+                        <div class="etiqueta">Rechazadas</div>
+                    </div>
+                </div>
+                <div class="tiempos" data-grupo="CALIDAD_MULTIPORT"></div>
+            </div>
+
+            <div class="grupo" data-grupo="CALIDAD_DROPS">
+                <div class="nombre">CALIDAD DROPS</div>
+                <div class="tarimas">Tarimas: 0</div>
+                <div class="leds" data-grupo="CALIDAD_DROPS" data-linea="linea1"></div>
+                <div class="contadores-calidad">
+                    <div class="contador-calidad">
+                        <span class="valor" id="liberadas_CALIDAD_DROPS">0</span>
+                        <div class="etiqueta">Liberadas</div>
+                    </div>
+                    <div class="contador-calidad">
+                        <span class="valor" id="rechazadas_CALIDAD_DROPS">0</span>
+                        <div class="etiqueta">Rechazadas</div>
+                    </div>
+                </div>
+                <div class="tiempos" data-grupo="CALIDAD_DROPS"></div>
+            </div>
+
+            <div class="grupo" data-grupo="CALIDAD_BEDROCK">
+                <div class="nombre">CALIDAD BEDROCK</div>
+                <div class="tarimas">Tarimas: 0</div>
+                <div class="leds" data-grupo="CALIDAD_BEDROCK" data-linea="linea1"></div>
+                <div class="contadores-calidad">
+                    <div class="contador-calidad">
+                        <span class="valor" id="liberadas_CALIDAD_BEDROCK">0</span>
+                        <div class="etiqueta">Liberadas</div>
+                    </div>
+                    <div class="contador-calidad">
+                        <span class="valor" id="rechazadas_CALIDAD_BEDROCK">0</span>
+                        <div class="etiqueta">Rechazadas</div>
+                    </div>
+                </div>
+                <div class="tiempos" data-grupo="CALIDAD_BEDROCK"></div>
+            </div>
+        </div>
+    </div>
+    <div class="footer">
+        <button class="usuario-btn btn-rojo" onclick="volverALoginCalidad()">Cerrar sesión</button>
+    </div>
+</section>
+
+
+<div id="modalCalidad" class="modal">
+<div class="modal-content">
+    <h3>Selecciona el estado de la tarima:</h3>
+    <div class="opciones">
+        <button class="opcion-btn" data-color="naranja">En proceso 🟡</button>
+        <button class="opcion-btn" data-color="rojo">Rechazada 🔴</button>
+        <button class="opcion-btn" data-color="verde">Liberada 🟢</button>
+    </div>
+    <button class="cerrar-btn">Cerrar</button>
+</div>
+</div>
+<div id="modalRechazo" class="modal">
+<div class="modal-content">
+    <h3>Detalles del Rechazo</h3>
+    <form id="formularioRechazo">
+        <label for="empleado">Empleado Originador:</label>
+        <input type="text" id="empleado" name="empleado" required>
+        <label for="linea">Línea afectada:</label>
+        <input type="text" id="linea" name="linea" required>
+        <label for="parte">No. de parte:</label>
+        <input type="text" id="parte" name="parte" required>
+        <label for="descripcionParte">Descripción del No. de parte:</label>
+        <input type="text" id="descripcionParte" name="descripcionParte" required>
+        <label for="problema">Descripción del problema:</label>
+        <textarea id="problema" name="problema" required></textarea>
+        <label for="causa">Causa raíz del problema:</label>
+        <textarea id="causa" name="causa" required></textarea>
+        <label for="accion">Acción correctiva:</label>
+        <textarea id="accion" name="accion" required></textarea>
+        <div class="modal-buttons">
+            <button type="button" id="cancelRechazo" class="usuario-btn btn-rojo">Cancelar</button>
+            <button type="submit" class="usuario-btn">Guardar Rechazo</button>
+        </div>
+    </form>
+</div>
+</div>
+<div id="modalAlert" class="modal">
+    <div class="modal-content">
+        <h3 id="modalAlertTitle">Notificación</h3>
+        <p id="modalAlertMessage" class="modal-generic-message"></p>
+        <div class="modal-buttons" style="justify-content: center;">
+            <button id="modalAlertOk" class="usuario-btn">OK</button>
+        </div>
+    </div>
+</div>
+<div id="modalConfirm" class="modal">
+    <div class="modal-content">
+        <h3 id="modalConfirmTitle">Confirmación</h3>
+        <p id="modalConfirmMessage" class="modal-generic-message"></p>
+        <div class="modal-buttons">
+            <button id="modalConfirmCancel" class="usuario-btn btn-rojo">Cancelar</button>
+            <button id="modalConfirmOk" class="usuario-btn">Confirmar</button>
+        </div>
+    </div>
+</div>
+<div id="modalPrompt" class="modal">
+    <div class="modal-content">
+        <h3 id="modalPromptTitle">Introducir Datos</h3>
+        <p id="modalPromptMessage" class="modal-generic-message"></p>
+        <input type="password" id="modalPromptInput" class="modal-prompt-input" autocomplete="off" />
+        <div class="modal-buttons">
+            <button id="modalPromptCancel" class="usuario-btn btn-rojo">Cancelar</button>
+            <button id="modalPromptOk" class="usuario-btn">Aceptar</button>
+        </div>
+    </div>
+</div>
+<script>
+// =================================================================================================
+// ======================= INICIO DEL CÓDIGO JAVASCRIPT (VERSIÓN CALIDAD) =======================
+// =================================================================================================
+
+// ================= CONFIG Y ESTADO =================
+const CONFIG = {
+    PASSWORDS: {
+        'CALIDAD_MULTIPORT': 'AQLMP',
+        'CALIDAD_DROPS': 'AQLDP',
+        'CALIDAD_BEDROCK': 'AQLBR',
+    }
+};
+
+let usuarioSeleccionado = null;
+let ledActivoParaFormulario = { grupo: null, idx: null, linea: null };
+
+// ================= FIREBASE =================
+const firebaseConfig = {
+  apiKey: "AIzaSyDahnSPvBNTYot00JCn5CBjggAYFVGhbjE",
+  authDomain: "panel-logistica-simple.firebaseapp.com",
+  databaseURL: "https://panel-logistica-simple-default-rtdb.firebaseio.com",
+  projectId: "panel-logistica-simple",
+  storageBucket: "panel-logistica-simple.appspot.com", // Corregido para que coincida con el nombre del proyecto
+  messagingSenderId: "528779971851",
+  appId: "1:528779971851:web:90241469a69be3a5a4e60e"
+};
+
+// Mantenemos esta forma de inicializar porque tu HTML usa los scripts de compatibilidad
+firebase.initializeApp(firebaseConfig); 
+const database = firebase.database();
+const db = database; 
+const ledRef = database.ref('estadoLEDs');
+let historialRef;
+let contadoresCalidadRef;
+let rechazosDetalladosRef;
+let dashboardListeners = [];
+// ======================= MODALES PERSONALIZADOS =======================
+const customAlert = (message, title = "Notificación") => {
+    return new Promise(resolve => {
+        const modal = document.getElementById('modalAlert');
+        document.getElementById('modalAlertTitle').textContent = title;
+        document.getElementById('modalAlertMessage').textContent = message;
+        modal.classList.add('visible');
+
+        const okButton = document.getElementById('modalAlertOk');
+        
+        const closeListener = () => {
+            modal.classList.remove('visible');
+            okButton.removeEventListener('click', closeListener);
+            resolve();
+        };
+
+        okButton.addEventListener('click', closeListener);
+    });
+};
+
+const customConfirm = (message, title = "Confirmación") => {
+    return new Promise(resolve => {
+        const modal = document.getElementById('modalConfirm');
+        document.getElementById('modalConfirmTitle').textContent = title;
+        document.getElementById('modalConfirmMessage').textContent = message;
+        modal.classList.add('visible');
+
+        const okButton = document.getElementById('modalConfirmOk');
+        const cancelButton = document.getElementById('modalConfirmCancel');
+
+        const resolveListener = (value) => {
+            modal.classList.remove('visible');
+            okButton.removeEventListener('click', confirmListener);
+            cancelButton.removeEventListener('click', cancelListener);
+            resolve(value);
+        };
+
+        const confirmListener = () => resolveListener(true);
+        const cancelListener = () => resolveListener(false);
+
+        okButton.addEventListener('click', confirmListener);
+        cancelButton.addEventListener('click', cancelListener);
+    });
+};
+
+const customPrompt = (message, title = "Introducir Contraseña") => {
+    return new Promise(resolve => {
+        const modal = document.getElementById('modalPrompt');
+        const input = document.getElementById('modalPromptInput');
+        document.getElementById('modalPromptTitle').textContent = title;
+        document.getElementById('modalPromptMessage').textContent = message;
+        input.value = '';
+        modal.classList.add('visible');
+        
+        setTimeout(() => {
+            input.focus();
+        }, 50);
+
+        const okButton = document.getElementById('modalPromptOk');
+        const cancelButton = document.getElementById('modalPromptCancel');
+
+        const resolveListener = (value) => {
+            modal.classList.remove('visible');
+            okButton.removeEventListener('click', okListener);
+            cancelButton.removeEventListener('click', cancelListener);
+            input.removeEventListener('keydown', enterListener);
+            resolve(value);
+        };
+
+        const okListener = () => resolveListener(input.value);
+        const cancelListener = () => resolveListener(null);
+        
+        const enterListener = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                okListener();
+            }
+        };
+
+        okButton.addEventListener('click', okListener);
+        cancelButton.addEventListener('click', cancelListener);
+        input.addEventListener('keydown', enterListener);
+    });
+};
+// ======================================================================
+
+// ================= FUNCIONES DE RENDER =================
+function inyectaLEDs(){
+    document.querySelectorAll('.grupo').forEach(grupoDiv => {
+        grupoDiv.classList.add('oculto');
+    });
+
+    if (usuarioSeleccionado.startsWith('CALIDAD_')) {
+        document.querySelector(`.grupo[data-grupo="${usuarioSeleccionado}"]`).classList.remove('oculto');
+        
+        const grupoBase = usuarioSeleccionado.replace('CALIDAD_', '');
+        document.querySelector(`.grupo[data-grupo="${grupoBase}"]`).classList.remove('oculto');
+    }
+
+    document.querySelectorAll('.grupo:not(.oculto) .leds').forEach(contenedor => {
+        const grupoLeds = contenedor.dataset.grupo;
+        const linea = contenedor.dataset.linea;
+        
+        const ledsPorLinea = 5;
+        contenedor.innerHTML = '';
+        
+        for(let i = 0; i < ledsPorLinea; i++){
+            const led = document.createElement('div');
+            led.className = 'led';
+            led.title = `${grupoLeds} • ${linea} • LED ${i+1}`;
+            led.addEventListener('click', () => togglearLED(grupoLeds, i, linea));
+            contenedor.appendChild(led);
+        }
+    });
+}
+
+function actualizarTodosLosContadores() {
+    document.querySelectorAll('.led.on').forEach(led => {
+        const horaEncendido = led.dataset.horaEncendido;
+        if (horaEncendido) {
+            const tiempoTranscurridoMs = new Date() - new Date(horaEncendido);
+            const minutosTranscurridos = Math.floor(tiempoTranscurridoMs / (1000 * 60));
+            
+            let spanTiempo = led.querySelector('.tiempo-transcurrido');
+            if (!spanTiempo) {
+                spanTiempo = document.createElement('span');
+                spanTiempo.className = 'tiempo-transcurrido';
+                led.appendChild(spanTiempo);
+            }
+            
+            spanTiempo.innerHTML = `<b>${minutosTranscurridos}</b><small>min</small>`;
+        }
+    });
+}
+
+function pintarEstado() {
+    db.ref('estadoLEDs').on('value', snapshot => {
+        const estados = snapshot.val() || {};
+        document.querySelectorAll('.leds').forEach(contenedor => {
+            const grupoLeds = contenedor.dataset.grupo;
+            const linea = contenedor.dataset.linea;
+
+            if (estados[grupoLeds] && estados[grupoLeds][linea]) {
+                const ledsEstado = estados[grupoLeds][linea];
+                contenedor.querySelectorAll('.led').forEach((led, index) => {
+                    led.classList.remove('on', 'naranja', 'rojo', 'verde', 'disabled');
+                    led.removeAttribute('data-hora-encendido'); 
+                    
+                    if (ledsEstado[index]) {
+                        if (grupoLeds.startsWith('CALIDAD_') && ledsEstado[index].color) {
+                            led.classList.add(ledsEstado[index].color);
+                            led.innerHTML = '';
+                        } else if (!grupoLeds.startsWith('CALIDAD_') && ledsEstado[index].encendido) {
+                            led.classList.add('on');
+                            const horaInicio = ledsEstado[index].horaEncendido || ledsEstado[index].timestamp;
+                            
+                            led.dataset.horaEncendido = horaInicio;
+
+                            let spanTiempo = led.querySelector('.tiempo-transcurrido');
+                            if (!spanTiempo) {
+                                spanTiempo = document.createElement('span');
+                                spanTiempo.className = 'tiempo-transcurrido';
+                                led.appendChild(spanTiempo);
+                            }
+                            
+                            const tiempoTranscurridoMs = new Date() - new Date(horaInicio);
+                            const minutosTranscurridos = Math.floor(tiempoTranscurridoMs / (1000 * 60));
+                            
+                            spanTiempo.innerHTML = `<b>${minutosTranscurridos}</b><small>min</small>`;
+                        } else {
+                            led.innerHTML = '';
+                        }
+                    } else {
+                        led.innerHTML = '';
+                    }
+                });
+            } else {
+                contenedor.querySelectorAll('.led').forEach(led => {
+                    led.classList.remove('on', 'naranja', 'rojo', 'verde', 'disabled');
+                    led.removeAttribute('data-hora-encendido');
+                    led.innerHTML = '';
+                });
+            }
+        });
+    });
+}
+ 
+function formatoHora(isoString) {
+    if (!isoString) return 'N/A';
+    const date = new Date(isoString);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
+
+function obtenerTurnoActual() {
+    const ahora = new Date();
+    const hora = ahora.getHours();
+    const minutos = ahora.getMinutes();
+    let fecha = new Date(ahora);
+    let turno;
+    if ((hora > 6 || (hora === 6 && minutos >= 30)) && (hora < 18 || (hora === 18 && minutos < 30))) {
+        turno = 'Turno 1';
+    } 
+    else {
+        turno = 'Turno 2';
+        if (hora < 6 || (hora === 6 && minutos < 30)) {
+            fecha.setDate(ahora.getDate() - 1);
+        }
+    }
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    const fechaFormateada = `${year}-${month}-${day}`;
+    return { fecha: fechaFormateada, turno };
+}
+
+
+function iniciarListenersFirebase() {
+    const { fecha, turno } = obtenerTurnoActual();
+    document.getElementById('turnoActual').textContent = `Turno actual: ${turno}`;
+
+    if (historialRef) historialRef.off();
+    if (contadoresCalidadRef) contadoresCalidadRef.off();
+    if (rechazosDetalladosRef) rechazosDetalladosRef.off();
+   
+    historialRef = database.ref(`historialLogs/${fecha}/${turno}`);
+    contadoresCalidadRef = database.ref(`contadoresCalidad/${fecha}/${turno}`);
+    rechazosDetalladosRef = database.ref(`rechazosDetallados/${fecha}/${turno}`);
+
+    historialRef.on('value', (snapshot) => {
+        const logs = snapshot.val() || {};
+        const contadores = { MULTIPORT: 0, BEDROCK: 0, DROPS: 0, CALIDAD_MULTIPORT: 0, CALIDAD_BEDROCK: 0, CALIDAD_DROPS: 0 };
+        
+        if (logs) {
+            Object.values(logs).forEach(log => {
+                if (log.accion === 'encendido' && contadores.hasOwnProperty(log.grupo)) {
+                    contadores[log.grupo]++;
+                }
+            });
+        }
+
+        document.querySelector('.grupo[data-grupo="MULTIPORT"] .tarimas').textContent = `Tarimas: ${contadores.MULTIPORT}`;
+        document.querySelector('.grupo[data-grupo="BEDROCK"] .tarimas').textContent = `Tarimas: ${contadores.BEDROCK}`;
+        document.querySelector('.grupo[data-grupo="DROPS"] .tarimas').textContent = `Tarimas: ${contadores.DROPS}`;
+        document.querySelector('.grupo[data-grupo="CALIDAD_MULTIPORT"] .tarimas').textContent = `Tarimas: ${contadores.CALIDAD_MULTIPORT}`;
+        document.querySelector('.grupo[data-grupo="CALIDAD_BEDROCK"] .tarimas').textContent = `Tarimas: ${contadores.CALIDAD_BEDROCK}`;
+        document.querySelector('.grupo[data-grupo="CALIDAD_DROPS"] .tarimas').textContent = `Tarimas: ${contadores.CALIDAD_DROPS}`;
+    });
+
+    contadoresCalidadRef.on('value', (snapshot) => {
+        const contadores = snapshot.val() || {};
+        const gruposCalidad = ['CALIDAD_MULTIPORT', 'CALIDAD_DROPS', 'CALIDAD_BEDROCK'];
+        gruposCalidad.forEach(grupo => {
+            const liberadas = contadores[grupo] ? contadores[grupo].liberadas || 0 : 0;
+            const rechazadas = contadores[grupo] ? contadores[grupo].rechazadas || 0 : 0;        
+            const liberadasSpan = document.getElementById(`liberadas_${grupo}`);
+            const rechazadasSpan = document.getElementById(`rechazadas_${grupo}`);
+            if (liberadasSpan) liberadasSpan.textContent = liberadas;
+            if (rechazadasSpan) rechazadasSpan.textContent = rechazadas;
+        });
+    });
+}
+// ================= PERMISOS Y LÓGICA =================
+async function togglearLED(grupo, idx, linea = 'linea1') {
+    const ledRef = db.ref('estadoLEDs/' + grupo + '/' + linea + '/' + idx);
+
+    if (usuarioSeleccionado.startsWith('CALIDAD_')) {
+        if (grupo.startsWith('CALIDAD_') && grupo === usuarioSeleccionado) {
+             ledRef.once('value', async (snapshot) => {
+                const estadoActual = snapshot.val() || {};
+                if(estadoActual.color === 'verde') {
+                    return customAlert('Este LED ya está liberado y no puede ser modificado por Calidad.', 'Acción no permitida');
+                }
+                mostrarOpcionesCalidad(grupo, idx, linea);
+             });
+        } else {
+            await customAlert('Solo puedes interactuar con los LEDs de tu propia área de calidad.', 'Acceso denegado');
+        }
+    }
+}
+
+// ================= LÓGICA DE CALIDAD MODAL =================
+function mostrarOpcionesCalidad(grupo, idx, linea) {
+    ledActivoParaFormulario = { grupo, idx, linea };
+    document.getElementById('modalCalidad').classList.add('visible');
+}
+
+function aplicarEstadoCalidad(nuevoColor) {
+    const { grupo, idx, linea } = ledActivoParaFormulario;
+    const ledRef = db.ref(`estadoLEDs/${grupo}/${linea}/${idx}`);
+
+    if (nuevoColor === 'verde') {
+        const contadorRef = contadoresCalidadRef.child(grupo);
+        contadorRef.child('liberadas').transaction(currentCount => (currentCount || 0) + 1);
+        ledRef.update({
+            color: nuevoColor,
+            timestamp: new Date().toISOString(),
+            usuario: usuarioSeleccionado,
+            disabled: true
+        });
+    } else {
+        ledRef.update({
+            color: nuevoColor,
+            timestamp: new Date().toISOString(),
+            usuario: usuarioSeleccionado,
+            disabled: false
+        });
+        if (nuevoColor === 'rojo') {
+            const contadorRef = contadoresCalidadRef.child(grupo);
+            contadorRef.child('rechazadas').transaction(currentCount => (currentCount || 0) + 1);
+        }
+    }
+}
+
+function mostrarFormularioRechazo() {
+    document.getElementById('modalCalidad').classList.remove('visible');
+    document.getElementById('modalRechazo').classList.add('visible');
+}
+
+function guardarRechazo(datos) {
+    const ahora = new Date();
+    const fecha = ahora.toLocaleDateString('es-MX');
+    const hora = ahora.toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'});
+
+    const datosCompletos = {
+        ...datos,
+        fecha: fecha,
+        hora: hora,
+        timestamp: ahora.toISOString(),
+        areaRechazo: ledActivoParaFormulario.grupo
+    };
+
+    rechazosDetalladosRef.push(datosCompletos)
+        .then(() => {
+            console.log("Rechazo guardado exitosamente:", datosCompletos);
+            aplicarEstadoCalidad('rojo');
+        })
+        .catch(async (error) => {
+            console.error("Error guardando rechazo:", error);
+            await customAlert("Hubo un error al guardar el rechazo.", "Error");
+        })
+        .finally(() => {
+            document.getElementById('modalRechazo').classList.remove('visible');
+        });
+}
+
+// ================= NAVEGACIÓN Y ARRANQUE =================
+function activarPantalla(id){
+    document.querySelectorAll('.pantalla').forEach(p => {
+        p.style.display = 'none';
+        p.classList.remove('activa');
+    });
+    const pantalla = document.getElementById(id);
+    pantalla.style.display = 'flex';
+    pantalla.classList.add('activa');
+}
+
+function volverALoginCalidad(){
+    usuarioSeleccionado = null;
+    db.ref('estadoLEDs').off(); 
+    if (historialRef) historialRef.off();
+    if (contadoresCalidadRef) contadoresCalidadRef.off();
+    if (rechazosDetalladosRef) rechazosDetalladosRef.off();
+    activarPantalla('pantallaCalidadLogin');
+}
+
+async function seleccionarUsuarioCalidad(subusuario) {
+    const password = await customPrompt(`Introduce la contraseña para ${subusuario.replace(/_/g, ' ')}:`);
+    if (password === null) return;
+
+    if (password === CONFIG.PASSWORDS[subusuario]) {
+        usuarioSeleccionado = subusuario;
+        document.getElementById('tituloFijo').textContent = `${subusuario.replace(/_/g, ' ')}`;
+        
+        activarPantalla('pantalla2');
+        inyectaLEDs();
+        pintarEstado();
+        iniciarListenersFirebase();
+        await customAlert(`¡Bienvenido, ${subusuario.replace(/_/g, ' ')}!`, 'Acceso Concedido');
+    } else {
+        await customAlert('Contraseña incorrecta. Inténtalo de nuevo.', 'Error de Autenticación');
+    }
+}
+
+
+// ================= ARRANQUE Y MANEJO DE MODALES =================
+window.addEventListener('load', ()=>{
+    firebase.auth().signInAnonymously().catch(err => console.error('Auth error:', err));
+    
+    firebase.auth().onAuthStateChanged(user => {
+        if (user) {
+            // No iniciar listeners aquí, esperar al login
+        }
+    });
+
+    setTimeout(() => {
+        const splash = document.getElementById('splashScreen');
+        splash.style.opacity = '0';
+        splash.addEventListener('transitionend', () => {
+            splash.classList.remove('activa');
+            activarPantalla('pantallaCalidadLogin');
+        }, { once: true });
+    }, 3000);
+    
+    const modalCalidad = document.getElementById('modalCalidad');
+    modalCalidad.querySelector('.cerrar-btn').addEventListener('click', () => modalCalidad.classList.remove('visible'));
+    modalCalidad.querySelectorAll('.opcion-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const nuevoColor = btn.dataset.color;
+            if (nuevoColor === 'rojo') {
+                mostrarFormularioRechazo();
+            } else {
+                aplicarEstadoCalidad(nuevoColor);
+                modalCalidad.classList.remove('visible');
+            }
+        });
+    });
+
+    const modalRechazo = document.getElementById('modalRechazo');
+    const formRechazo = document.getElementById('formularioRechazo');
+    
+    formRechazo.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const datos = {
+            empleado: formRechazo.empleado.value,
+            linea: formRechazo.linea.value,
+            parte: formRechazo.parte.value,
+            descripcionParte: formRechazo.descripcionParte.value,
+            problema: formRechazo.problema.value,
+            causa: formRechazo.causa.value,
+            accion: formRechazo.accion.value,
+        };
+        guardarRechazo(datos);
+        formRechazo.reset();
+    });
+
+    document.getElementById('cancelRechazo').addEventListener('click', () => {
+        modalRechazo.classList.remove('visible');
+        formRechazo.reset();
+    });
+
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').then(reg => console.log("✅ Service Worker registrado:", reg)).catch(err => console.error("❌ Error al registrar Service Worker:", err));
+    }
+    
+    setInterval(actualizarTodosLosContadores, 10000); // Actualiza cada 10 segundos
+});
+</script>
+</body>
+</html>
