@@ -230,7 +230,6 @@ html, body {
   gap: 24px;
   margin-top: 20px;
 }
-.resumen-turno { display: none !important; } /* Ocultar para Calidad */
 .grupo-contenedor {
   display: flex;
   flex-wrap: wrap;
@@ -785,6 +784,7 @@ let historialRef;
 let contadoresCalidadRef;
 let rechazosDetalladosRef;
 let dashboardListeners = [];
+
 // ======================= MODALES PERSONALIZADOS =======================
 const customAlert = (message, title = "Notificación") => {
     return new Promise(resolve => {
@@ -878,10 +878,8 @@ function inyectaLEDs(){
     });
 
     if (usuarioSeleccionado.startsWith('CALIDAD_')) {
+        // CORRECCIÓN: Mostrar únicamente el panel de calidad del usuario logueado.
         document.querySelector(`.grupo[data-grupo="${usuarioSeleccionado}"]`).classList.remove('oculto');
-        
-        const grupoBase = usuarioSeleccionado.replace('CALIDAD_', '');
-        document.querySelector(`.grupo[data-grupo="${grupoBase}"]`).classList.remove('oculto');
     }
 
     document.querySelectorAll('.grupo:not(.oculto) .leds').forEach(contenedor => {
