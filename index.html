@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family/Poppins:wght@400;600;700&display=swap" rel="stylesheet">
 
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -601,31 +601,24 @@ html, body {
         <div class="grupo-contenedor">
             <div class="grupo" data-grupo="MULTIPORT">
                 <div class="nombre">MULTIPORT</div>
-                <div class="tarimas">Tarimas: 0</div>
                 <div class="leds" data-grupo="MULTIPORT" data-linea="linea1"></div>
                 <div class="leds" data-grupo="MULTIPORT" data-linea="linea2"></div>
-                <div class="tiempos" data-grupo="MULTIPORT"></div>
             </div>
 
             <div class="grupo" data-grupo="DROPS">
                 <div class="nombre">DROPS</div>
-                <div class="tarimas">Tarimas: 0</div>
                 <div class="leds" data-grupo="DROPS" data-linea="linea1"></div>
                 <div class="leds" data-grupo="DROPS" data-linea="linea2"></div>
-                <div class="tiempos" data-grupo="DROPS"></div>
             </div>
 
             <div class="grupo" data-grupo="BEDROCK">
                 <div class="nombre">BEDROCK</div>
-                <div class="tarimas">Tarimas: 0</div>
                 <div class="leds" data-grupo="BEDROCK" data-linea="linea1"></div>
                 <div class="leds" data-grupo="BEDROCK" data-linea="linea2"></div>
-                <div class="tiempos" data-grupo="BEDROCK"></div>
             </div>
 
             <div class="grupo" data-grupo="CALIDAD_MULTIPORT">
                 <div class="nombre">CALIDAD MULTIPORT</div>
-                <div class="tarimas">Tarimas: 0</div>
                 <div class="leds" data-grupo="CALIDAD_MULTIPORT" data-linea="linea1"></div>
                 <div class="contadores-calidad">
                     <div class="contador-calidad">
@@ -637,12 +630,10 @@ html, body {
                         <div class="etiqueta">Rechazadas</div>
                     </div>
                 </div>
-                <div class="tiempos" data-grupo="CALIDAD_MULTIPORT"></div>
             </div>
 
             <div class="grupo" data-grupo="CALIDAD_DROPS">
                 <div class="nombre">CALIDAD DROPS</div>
-                <div class="tarimas">Tarimas: 0</div>
                 <div class="leds" data-grupo="CALIDAD_DROPS" data-linea="linea1"></div>
                 <div class="contadores-calidad">
                     <div class="contador-calidad">
@@ -654,12 +645,10 @@ html, body {
                         <div class="etiqueta">Rechazadas</div>
                     </div>
                 </div>
-                <div class="tiempos" data-grupo="CALIDAD_DROPS"></div>
             </div>
 
             <div class="grupo" data-grupo="CALIDAD_BEDROCK">
                 <div class="nombre">CALIDAD BEDROCK</div>
-                <div class="tarimas">Tarimas: 0</div>
                 <div class="leds" data-grupo="CALIDAD_BEDROCK" data-linea="linea1"></div>
                 <div class="contadores-calidad">
                     <div class="contador-calidad">
@@ -671,7 +660,6 @@ html, body {
                         <div class="etiqueta">Rechazadas</div>
                     </div>
                 </div>
-                <div class="tiempos" data-grupo="CALIDAD_BEDROCK"></div>
             </div>
         </div>
     </div>
@@ -753,14 +741,8 @@ html, body {
 // =================================================================================================
 
 // ================= CONFIG Y ESTADO =================
-const CONFIG = {
-    PASSWORDS: {
-        'CALIDAD_MULTIPORT': 'AQLMP',
-        'CALIDAD_DROPS': 'AQLDP',
-        'CALIDAD_BEDROCK': 'AQLBR',
-    }
-};
-
+// ✅ AJUSTADO: Se elimina el objeto de contraseñas hardcodeado.
+let PASSWORDS_DB = {}; // Objeto para almacenar las contraseñas desde Firebase.
 let usuarioSeleccionado = null;
 let ledActivoParaFormulario = { grupo: null, idx: null, linea: null };
 
@@ -770,12 +752,11 @@ const firebaseConfig = {
   authDomain: "panel-logistica-simple.firebaseapp.com",
   databaseURL: "https://panel-logistica-simple-default-rtdb.firebaseio.com",
   projectId: "panel-logistica-simple",
-  storageBucket: "panel-logistica-simple.appspot.com", // Corregido para que coincida con el nombre del proyecto
+  storageBucket: "panel-logistica-simple.appspot.com",
   messagingSenderId: "528779971851",
   appId: "1:528779971851:web:90241469a69be3a5a4e60e"
 };
 
-// Mantenemos esta forma de inicializar porque tu HTML usa los scripts de compatibilidad
 firebase.initializeApp(firebaseConfig); 
 const database = firebase.database();
 const db = database; 
@@ -783,7 +764,6 @@ const ledRef = database.ref('estadoLEDs');
 let historialRef;
 let contadoresCalidadRef;
 let rechazosDetalladosRef;
-let dashboardListeners = [];
 
 // ======================= MODALES PERSONALIZADOS =======================
 const customAlert = (message, title = "Notificación") => {
@@ -792,44 +772,35 @@ const customAlert = (message, title = "Notificación") => {
         document.getElementById('modalAlertTitle').textContent = title;
         document.getElementById('modalAlertMessage').textContent = message;
         modal.classList.add('visible');
-
         const okButton = document.getElementById('modalAlertOk');
-        
         const closeListener = () => {
             modal.classList.remove('visible');
             okButton.removeEventListener('click', closeListener);
             resolve();
         };
-
         okButton.addEventListener('click', closeListener);
     });
 };
-
 const customConfirm = (message, title = "Confirmación") => {
     return new Promise(resolve => {
         const modal = document.getElementById('modalConfirm');
         document.getElementById('modalConfirmTitle').textContent = title;
         document.getElementById('modalConfirmMessage').textContent = message;
         modal.classList.add('visible');
-
         const okButton = document.getElementById('modalConfirmOk');
         const cancelButton = document.getElementById('modalConfirmCancel');
-
         const resolveListener = (value) => {
             modal.classList.remove('visible');
             okButton.removeEventListener('click', confirmListener);
             cancelButton.removeEventListener('click', cancelListener);
             resolve(value);
         };
-
         const confirmListener = () => resolveListener(true);
         const cancelListener = () => resolveListener(false);
-
         okButton.addEventListener('click', confirmListener);
         cancelButton.addEventListener('click', cancelListener);
     });
 };
-
 const customPrompt = (message, title = "Introducir Contraseña") => {
     return new Promise(resolve => {
         const modal = document.getElementById('modalPrompt');
@@ -838,14 +809,9 @@ const customPrompt = (message, title = "Introducir Contraseña") => {
         document.getElementById('modalPromptMessage').textContent = message;
         input.value = '';
         modal.classList.add('visible');
-        
-        setTimeout(() => {
-            input.focus();
-        }, 50);
-
+        setTimeout(() => input.focus(), 50);
         const okButton = document.getElementById('modalPromptOk');
         const cancelButton = document.getElementById('modalPromptCancel');
-
         const resolveListener = (value) => {
             modal.classList.remove('visible');
             okButton.removeEventListener('click', okListener);
@@ -853,17 +819,14 @@ const customPrompt = (message, title = "Introducir Contraseña") => {
             input.removeEventListener('keydown', enterListener);
             resolve(value);
         };
-
         const okListener = () => resolveListener(input.value);
         const cancelListener = () => resolveListener(null);
-        
         const enterListener = (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 okListener();
             }
         };
-
         okButton.addEventListener('click', okListener);
         cancelButton.addEventListener('click', cancelListener);
         input.addEventListener('keydown', enterListener);
@@ -874,18 +837,13 @@ const customPrompt = (message, title = "Introducir Contraseña") => {
 // ================= FUNCIONES DE RENDER =================
 function inyectaLEDs(){
     document.querySelectorAll('.grupo').forEach(grupoDiv => {
-        grupoDiv.classList.add('oculto');
+        // En el panel de calidad, mostramos todos los grupos por defecto
+        grupoDiv.classList.remove('oculto');
     });
 
-    if (usuarioSeleccionado.startsWith('CALIDAD_')) {
-        // CORRECCIÓN: Mostrar únicamente el panel de calidad del usuario logueado.
-        document.querySelector(`.grupo[data-grupo="${usuarioSeleccionado}"]`).classList.remove('oculto');
-    }
-
-    document.querySelectorAll('.grupo:not(.oculto) .leds').forEach(contenedor => {
+    document.querySelectorAll('.leds').forEach(contenedor => {
         const grupoLeds = contenedor.dataset.grupo;
         const linea = contenedor.dataset.linea;
-        
         const ledsPorLinea = 5;
         contenedor.innerHTML = '';
         
@@ -893,27 +851,13 @@ function inyectaLEDs(){
             const led = document.createElement('div');
             led.className = 'led';
             led.title = `${grupoLeds} • ${linea} • LED ${i+1}`;
-            led.addEventListener('click', () => togglearLED(grupoLeds, i, linea));
-            contenedor.appendChild(led);
-        }
-    });
-}
-
-function actualizarTodosLosContadores() {
-    document.querySelectorAll('.led.on').forEach(led => {
-        const horaEncendido = led.dataset.horaEncendido;
-        if (horaEncendido) {
-            const tiempoTranscurridoMs = new Date() - new Date(horaEncendido);
-            const minutosTranscurridos = Math.floor(tiempoTranscurridoMs / (1000 * 60));
-            
-            let spanTiempo = led.querySelector('.tiempo-transcurrido');
-            if (!spanTiempo) {
-                spanTiempo = document.createElement('span');
-                spanTiempo.className = 'tiempo-transcurrido';
-                led.appendChild(spanTiempo);
+            // Solo los LEDs de calidad son clickeables en esta vista
+            if (grupoLeds.startsWith('CALIDAD_')) {
+                led.addEventListener('click', () => togglearLED(grupoLeds, i, linea));
+            } else {
+                led.classList.add('disabled'); // Los LEDs de producción no son interactivos
             }
-            
-            spanTiempo.innerHTML = `<b>${minutosTranscurridos}</b><small>min</small>`;
+            contenedor.appendChild(led);
         }
     });
 }
@@ -928,56 +872,25 @@ function pintarEstado() {
             if (estados[grupoLeds] && estados[grupoLeds][linea]) {
                 const ledsEstado = estados[grupoLeds][linea];
                 contenedor.querySelectorAll('.led').forEach((led, index) => {
-                    led.classList.remove('on', 'naranja', 'rojo', 'verde', 'disabled');
-                    led.removeAttribute('data-hora-encendido'); 
+                    led.classList.remove('on', 'naranja', 'rojo', 'verde');
                     
                     if (ledsEstado[index]) {
                         if (grupoLeds.startsWith('CALIDAD_') && ledsEstado[index].color) {
                             led.classList.add(ledsEstado[index].color);
-                            led.innerHTML = '';
                         } else if (!grupoLeds.startsWith('CALIDAD_') && ledsEstado[index].encendido) {
                             led.classList.add('on');
-                            const horaInicio = ledsEstado[index].horaEncendido || ledsEstado[index].timestamp;
-                            
-                            led.dataset.horaEncendido = horaInicio;
-
-                            let spanTiempo = led.querySelector('.tiempo-transcurrido');
-                            if (!spanTiempo) {
-                                spanTiempo = document.createElement('span');
-                                spanTiempo.className = 'tiempo-transcurrido';
-                                led.appendChild(spanTiempo);
-                            }
-                            
-                            const tiempoTranscurridoMs = new Date() - new Date(horaInicio);
-                            const minutosTranscurridos = Math.floor(tiempoTranscurridoMs / (1000 * 60));
-                            
-                            spanTiempo.innerHTML = `<b>${minutosTranscurridos}</b><small>min</small>`;
-                        } else {
-                            led.innerHTML = '';
                         }
-                    } else {
-                        led.innerHTML = '';
                     }
                 });
             } else {
                 contenedor.querySelectorAll('.led').forEach(led => {
-                    led.classList.remove('on', 'naranja', 'rojo', 'verde', 'disabled');
-                    led.removeAttribute('data-hora-encendido');
-                    led.innerHTML = '';
+                    led.classList.remove('on', 'naranja', 'rojo', 'verde');
                 });
             }
         });
     });
 }
  
-function formatoHora(isoString) {
-    if (!isoString) return 'N/A';
-    const date = new Date(isoString);
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${hours}:${minutes}`;
-}
-
 function obtenerTurnoActual() {
     const ahora = new Date();
     const hora = ahora.getHours();
@@ -1000,7 +913,6 @@ function obtenerTurnoActual() {
     return { fecha: fechaFormateada, turno };
 }
 
-
 function iniciarListenersFirebase() {
     const { fecha, turno } = obtenerTurnoActual();
     document.getElementById('turnoActual').textContent = `Turno actual: ${turno}`;
@@ -1015,7 +927,7 @@ function iniciarListenersFirebase() {
 
     historialRef.on('value', (snapshot) => {
         const logs = snapshot.val() || {};
-        const contadores = { MULTIPORT: 0, BEDROCK: 0, DROPS: 0, CALIDAD_MULTIPORT: 0, CALIDAD_BEDROCK: 0, CALIDAD_DROPS: 0 };
+        const contadores = { MULTIPORT: 0, BEDROCK: 0, DROPS: 0 };
         
         if (logs) {
             Object.values(logs).forEach(log => {
@@ -1024,13 +936,9 @@ function iniciarListenersFirebase() {
                 }
             });
         }
-
         document.querySelector('.grupo[data-grupo="MULTIPORT"] .tarimas').textContent = `Tarimas: ${contadores.MULTIPORT}`;
         document.querySelector('.grupo[data-grupo="BEDROCK"] .tarimas').textContent = `Tarimas: ${contadores.BEDROCK}`;
         document.querySelector('.grupo[data-grupo="DROPS"] .tarimas').textContent = `Tarimas: ${contadores.DROPS}`;
-        document.querySelector('.grupo[data-grupo="CALIDAD_MULTIPORT"] .tarimas').textContent = `Tarimas: ${contadores.CALIDAD_MULTIPORT}`;
-        document.querySelector('.grupo[data-grupo="CALIDAD_BEDROCK"] .tarimas').textContent = `Tarimas: ${contadores.CALIDAD_BEDROCK}`;
-        document.querySelector('.grupo[data-grupo="CALIDAD_DROPS"] .tarimas').textContent = `Tarimas: ${contadores.CALIDAD_DROPS}`;
     });
 
     contadoresCalidadRef.on('value', (snapshot) => {
@@ -1046,16 +954,17 @@ function iniciarListenersFirebase() {
         });
     });
 }
+
 // ================= PERMISOS Y LÓGICA =================
 async function togglearLED(grupo, idx, linea = 'linea1') {
     const ledRef = db.ref('estadoLEDs/' + grupo + '/' + linea + '/' + idx);
 
     if (usuarioSeleccionado.startsWith('CALIDAD_')) {
-        if (grupo.startsWith('CALIDAD_') && grupo === usuarioSeleccionado) {
+        if (grupo === usuarioSeleccionado) {
              ledRef.once('value', async (snapshot) => {
                 const estadoActual = snapshot.val() || {};
                 if(estadoActual.color === 'verde') {
-                    return customAlert('Este LED ya está liberado y no puede ser modificado por Calidad.', 'Acción no permitida');
+                    return customAlert('Este LED ya está liberado y no puede ser modificado.', 'Acción no permitida');
                 }
                 mostrarOpcionesCalidad(grupo, idx, linea);
              });
@@ -1078,19 +987,9 @@ function aplicarEstadoCalidad(nuevoColor) {
     if (nuevoColor === 'verde') {
         const contadorRef = contadoresCalidadRef.child(grupo);
         contadorRef.child('liberadas').transaction(currentCount => (currentCount || 0) + 1);
-        ledRef.update({
-            color: nuevoColor,
-            timestamp: new Date().toISOString(),
-            usuario: usuarioSeleccionado,
-            disabled: true
-        });
+        ledRef.update({ color: nuevoColor, timestamp: new Date().toISOString(), usuario: usuarioSeleccionado, disabled: true });
     } else {
-        ledRef.update({
-            color: nuevoColor,
-            timestamp: new Date().toISOString(),
-            usuario: usuarioSeleccionado,
-            disabled: false
-        });
+        ledRef.update({ color: nuevoColor, timestamp: new Date().toISOString(), usuario: usuarioSeleccionado, disabled: false });
         if (nuevoColor === 'rojo') {
             const contadorRef = contadoresCalidadRef.child(grupo);
             contadorRef.child('rechazadas').transaction(currentCount => (currentCount || 0) + 1);
@@ -1105,20 +1004,14 @@ function mostrarFormularioRechazo() {
 
 function guardarRechazo(datos) {
     const ahora = new Date();
-    const fecha = ahora.toLocaleDateString('es-MX');
+    const { fecha, turno } = obtenerTurnoActual();
     const hora = ahora.toLocaleTimeString('es-MX', {hour: '2-digit', minute: '2-digit'});
 
-    const datosCompletos = {
-        ...datos,
-        fecha: fecha,
-        hora: hora,
-        timestamp: ahora.toISOString(),
-        areaRechazo: ledActivoParaFormulario.grupo
-    };
+    const datosCompletos = { ...datos, fecha, hora, timestamp: ahora.toISOString(), areaRechazo: ledActivoParaFormulario.grupo };
 
-    rechazosDetalladosRef.push(datosCompletos)
+    database.ref(`rechazosDetallados/${fecha}/${turno}`).push(datosCompletos)
         .then(() => {
-            console.log("Rechazo guardado exitosamente:", datosCompletos);
+            console.log("Rechazo guardado exitosamente");
             aplicarEstadoCalidad('rojo');
         })
         .catch(async (error) => {
@@ -1132,13 +1025,8 @@ function guardarRechazo(datos) {
 
 // ================= NAVEGACIÓN Y ARRANQUE =================
 function activarPantalla(id){
-    document.querySelectorAll('.pantalla').forEach(p => {
-        p.style.display = 'none';
-        p.classList.remove('activa');
-    });
-    const pantalla = document.getElementById(id);
-    pantalla.style.display = 'flex';
-    pantalla.classList.add('activa');
+    document.querySelectorAll('.pantalla').forEach(p => p.classList.remove('activa'));
+    document.getElementById(id).classList.add('activa');
 }
 
 function volverALoginCalidad(){
@@ -1154,7 +1042,8 @@ async function seleccionarUsuarioCalidad(subusuario) {
     const password = await customPrompt(`Introduce la contraseña para ${subusuario.replace(/_/g, ' ')}:`);
     if (password === null) return;
 
-    if (password === CONFIG.PASSWORDS[subusuario]) {
+    // ✅ AJUSTADO: Se comprueba contra las contraseñas cargadas de la base de datos.
+    if (password === PASSWORDS_DB[subusuario]) {
         usuarioSeleccionado = subusuario;
         document.getElementById('tituloFijo').textContent = `${subusuario.replace(/_/g, ' ')}`;
         
@@ -1168,25 +1057,39 @@ async function seleccionarUsuarioCalidad(subusuario) {
     }
 }
 
+// ✅ NUEVO: Función para cargar las contraseñas desde Firebase al iniciar.
+async function cargarContraseñas() {
+    const ref = database.ref('config/passwords');
+    const snapshot = await ref.once('value');
+
+    if (snapshot.exists()) {
+        PASSWORDS_DB = snapshot.val();
+        console.log("Contraseñas cargadas desde Firebase.");
+    } else {
+        // Si no existen, no se puede iniciar sesión. El panel principal debe ejecutarse primero.
+        document.querySelector('.splash-loading').textContent = 'Error de Configuración';
+        await customAlert("No se encontraron contraseñas en la base de datos. Pide a un supervisor que inicie el panel principal de logística para crearlas.", "Error Crítico");
+    }
+}
+
 
 // ================= ARRANQUE Y MANEJO DE MODALES =================
 window.addEventListener('load', ()=>{
-    firebase.auth().signInAnonymously().catch(err => console.error('Auth error:', err));
-    
-    firebase.auth().onAuthStateChanged(user => {
-        if (user) {
-            // No iniciar listeners aquí, esperar al login
-        }
-    });
-
-    setTimeout(() => {
-        const splash = document.getElementById('splashScreen');
-        splash.style.opacity = '0';
-        splash.addEventListener('transitionend', () => {
-            splash.classList.remove('activa');
-            activarPantalla('pantallaCalidadLogin');
-        }, { once: true });
-    }, 3000);
+    firebase.auth().signInAnonymously()
+    .then(() => {
+        // ✅ AJUSTADO: Cargar contraseñas es el primer paso después de conectar.
+        cargarContraseñas().then(() => {
+            setTimeout(() => {
+                const splash = document.getElementById('splashScreen');
+                splash.style.opacity = '0';
+                splash.addEventListener('transitionend', () => {
+                    splash.classList.remove('activa');
+                    activarPantalla('pantallaCalidadLogin');
+                }, { once: true });
+            }, 1500);
+        });
+    })
+    .catch(err => console.error('Auth error:', err));
     
     const modalCalidad = document.getElementById('modalCalidad');
     modalCalidad.querySelector('.cerrar-btn').addEventListener('click', () => modalCalidad.classList.remove('visible'));
@@ -1208,13 +1111,9 @@ window.addEventListener('load', ()=>{
     formRechazo.addEventListener('submit', (e) => {
         e.preventDefault();
         const datos = {
-            empleado: formRechazo.empleado.value,
-            linea: formRechazo.linea.value,
-            parte: formRechazo.parte.value,
-            descripcionParte: formRechazo.descripcionParte.value,
-            problema: formRechazo.problema.value,
-            causa: formRechazo.causa.value,
-            accion: formRechazo.accion.value,
+            empleado: formRechazo.empleado.value, linea: formRechazo.linea.value, parte: formRechazo.parte.value,
+            descripcionParte: formRechazo.descripcionParte.value, problema: formRechazo.problema.value,
+            causa: formRechazo.causa.value, accion: formRechazo.accion.value,
         };
         guardarRechazo(datos);
         formRechazo.reset();
@@ -1228,8 +1127,6 @@ window.addEventListener('load', ()=>{
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('./sw.js').then(reg => console.log("✅ Service Worker registrado:", reg)).catch(err => console.error("❌ Error al registrar Service Worker:", err));
     }
-    
-    setInterval(actualizarTodosLosContadores, 10000); // Actualiza cada 10 segundos
 });
 </script>
 </body>
